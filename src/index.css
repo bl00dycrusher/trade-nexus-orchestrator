@@ -4,6 +4,20 @@
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
 
+/* Trading application specific colors */
+:root {
+  --trading-success: 142 76% 36%;
+  --trading-success-foreground: 355.7 100% 97.3%;
+  --trading-danger: 0 84% 60%;
+  --trading-danger-foreground: 210 40% 98%;
+  --trading-warning: 48 96% 53%;
+  --trading-warning-foreground: 26 83% 14%;
+  --trading-info: 221 83% 53%;
+  --trading-info-foreground: 210 40% 98%;
+  --trading-neutral: 220 14% 96%;
+  --trading-neutral-foreground: 220 9% 46%;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

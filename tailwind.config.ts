@@ -61,6 +61,18 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				trading: {
+					success: 'hsl(var(--trading-success))',
+					'success-foreground': 'hsl(var(--trading-success-foreground))',
+					danger: 'hsl(var(--trading-danger))',
+					'danger-foreground': 'hsl(var(--trading-danger-foreground))',
+					warning: 'hsl(var(--trading-warning))',
+					'warning-foreground': 'hsl(var(--trading-warning-foreground))',
+					info: 'hsl(var(--trading-info))',
+					'info-foreground': 'hsl(var(--trading-info-foreground))',
+					neutral: 'hsl(var(--trading-neutral))',
+					'neutral-foreground': 'hsl(var(--trading-neutral-foreground))'
 				}
 			},
 			borderRadius: {
