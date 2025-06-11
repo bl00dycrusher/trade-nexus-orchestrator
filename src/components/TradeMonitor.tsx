@@ -4,110 +4,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { TrendingUp, TrendingDown, RefreshCw, Filter } from 'lucide-react';
+import { TrendingUp, RefreshCw, Filter } from 'lucide-react';
 
-interface Trade {
-  id: string;
-  symbol: string;
-  type: 'BUY' | 'SELL';
-  volume: number;
-  openPrice: number;
-  currentPrice: number;
-  profit: number;
-  openTime: Date;
-  provider: string;
-  copyer: string;
-  status: 'Open' | 'Closed' | 'Pending';
+interface TradeMonitorProps {
+  trades: any[];
 }
 
-export const TradeMonitor = () => {
-  const [trades] = useState<Trade[]>([
-    {
-      id: '1',
-      symbol: 'EURUSD',
-      type: 'BUY',
-      volume: 0.1,
-      openPrice: 1.0850,
-      currentPrice: 1.0865,
-      profit: 15.0,
-      openTime: new Date(Date.now() - 1000 * 60 * 30),
-      provider: 'MT5 Main Account',
-      copyer: 'cTrader Copy Account',
-      status: 'Open'
-    },
-    {
-      id: '2',
-      symbol: 'GBPUSD',
-      type: 'SELL',
-      volume: 0.2,
-      openPrice: 1.2650,
-      currentPrice: 1.2635,
-      profit: 30.0,
-      openTime: new Date(Date.now() - 1000 * 60 * 60),
-      provider: 'MT5 Main Account',
-      copyer: 'cTrader Copy Account',
-      status: 'Open'
-    },
-    {
-      id: '3',
-      symbol: 'USDJPY',
-      type: 'BUY',
-      volume: 0.15,
-      openPrice: 150.25,
-      currentPrice: 150.10,
-      profit: -22.5,
-      openTime: new Date(Date.now() - 1000 * 60 * 45),
-      provider: 'MT5 Secondary',
-      copyer: 'cTrader Pro',
-      status: 'Open'
-    }
-  ]);
-
+export const TradeMonitor = ({ trades }: TradeMonitorProps) => {
   const [activeTab, setActiveTab] = useState('live');
 
-  const getTradeTypeIcon = (type: Trade['type']) => {
-    return type === 'BUY' ? (
-      <TrendingUp className="h-4 w-4 text-trading-success" />
-    ) : (
-      <TrendingDown className="h-4 w-4 text-trading-danger" />
-    );
-  };
-
-  const getTradeTypeBadge = (type: Trade['type']) => {
-    return type === 'BUY' ? (
-      <Badge className="bg-trading-success text-trading-success-foreground">BUY</Badge>
-    ) : (
-      <Badge className="bg-trading-danger text-trading-danger-foreground">SELL</Badge>
-    );
-  };
-
-  const getProfitDisplay = (profit: number) => {
-    const isProfit = profit >= 0;
-    return (
-      <span className={`font-medium ${isProfit ? 'text-trading-success' : 'text-trading-danger'}`}>
-        {isProfit ? '+' : ''}${profit.toFixed(2)}
-      </span>
-    );
-  };
-
-  const getStatusBadge = (status: Trade['status']) => {
-    switch (status) {
-      case 'Open':
-        return <Badge className="bg-trading-info text-trading-info-foreground">Open</Badge>;
-      case 'Closed':
-        return <Badge className="bg-trading-neutral text-trading-neutral-foreground">Closed</Badge>;
-      case 'Pending':
-        return <Badge className="bg-trading-warning text-trading-warning-foreground">Pending</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
-  };
-
-  const calculateTotalProfit = () => {
-    return trades.reduce((sum, trade) => sum + trade.profit, 0);
-  };
-
-  const getOpenTrades = () => trades.filter(trade => trade.status === 'Open');
 
   return (
     <div className="space-y-6">
@@ -134,8 +39,8 @@ export const TradeMonitor = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Open Trades</p>
-                <p className="text-2xl font-bold">{getOpenTrades().length}</p>
+                <p className="text-sm text-muted-foreground">Total Trades</p>
+                <p className="text-2xl font-bold">{trades.length}</p>
               </div>
               <TrendingUp className="h-8 w-8 text-trading-info" />
             </div>
@@ -145,19 +50,8 @@ export const TradeMonitor = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total P&L</p>
-                <p className="text-2xl font-bold">{getProfitDisplay(calculateTotalProfit())}</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-trading-success" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active Pairs</p>
-                <p className="text-2xl font-bold">{new Set(trades.map(t => t.symbol)).size}</p>
+                <p className="text-sm text-muted-foreground">Active Symbols</p>
+                <p className="text-2xl font-bold">{new Set(trades.map(t => t.trade?.symbol)).size}</p>
               </div>
               <TrendingUp className="h-8 w-8 text-trading-warning" />
             </div>
@@ -167,8 +61,19 @@ export const TradeMonitor = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-sm text-muted-foreground">Recent Activity</p>
+                <p className="text-2xl font-bold">{trades.filter(t => Date.now() - new Date(t.timestamp).getTime() < 3600000).length}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-trading-success" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm text-muted-foreground">Total Volume</p>
-                <p className="text-2xl font-bold">{trades.reduce((sum, trade) => sum + trade.volume, 0).toFixed(2)}</p>
+                <p className="text-2xl font-bold">{trades.reduce((sum, trade) => sum + (trade.trade?.volume || 0), 0).toFixed(2)}</p>
               </div>
               <TrendingUp className="h-8 w-8 text-trading-neutral-foreground" />
             </div>
@@ -187,49 +92,44 @@ export const TradeMonitor = () => {
         <TabsContent value="live">
           <Card>
             <CardHeader>
-              <CardTitle>Open Positions</CardTitle>
-              <CardDescription>Currently active trades being copied</CardDescription>
+              <CardTitle>Copied Trades</CardTitle>
+              <CardDescription>Real-time trade copying activity</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Symbol</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead>Action</TableHead>
                     <TableHead>Volume</TableHead>
-                    <TableHead>Open Price</TableHead>
-                    <TableHead>Current Price</TableHead>
-                    <TableHead>P&L</TableHead>
-                    <TableHead>Provider → Copyer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Open Time</TableHead>
+                    <TableHead>From</TableHead>
+                    <TableHead>To</TableHead>
+                    <TableHead>Timestamp</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {getOpenTrades().map((trade) => (
-                    <TableRow key={trade.id}>
-                      <TableCell className="font-medium">{trade.symbol}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getTradeTypeIcon(trade.type)}
-                          {getTradeTypeBadge(trade.type)}
-                        </div>
+                  {trades.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        No trades copied yet
                       </TableCell>
-                      <TableCell>{trade.volume}</TableCell>
-                      <TableCell>{trade.openPrice.toFixed(5)}</TableCell>
-                      <TableCell>{trade.currentPrice.toFixed(5)}</TableCell>
-                      <TableCell>{getProfitDisplay(trade.profit)}</TableCell>
-                      <TableCell>
-                        <div className="text-xs">
-                          <div className="text-trading-info">{trade.provider}</div>
-                          <div className="text-muted-foreground">↓</div>
-                          <div className="text-trading-warning">{trade.copyer}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(trade.status)}</TableCell>
-                      <TableCell>{trade.openTime.toLocaleTimeString()}</TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    trades.map((trade) => (
+                      <TableRow key={trade.id}>
+                        <TableCell className="font-medium">{trade.trade?.symbol || 'Unknown'}</TableCell>
+                        <TableCell>
+                          <Badge className={trade.trade?.action === 'BUY' ? "bg-trading-success text-trading-success-foreground" : "bg-trading-danger text-trading-danger-foreground"}>
+                            {trade.trade?.action || 'Unknown'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{trade.trade?.volume || 0}</TableCell>
+                        <TableCell className="text-trading-info">{trade.from}</TableCell>
+                        <TableCell className="text-trading-warning">{trade.to}</TableCell>
+                        <TableCell>{new Date(trade.timestamp).toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -266,30 +166,37 @@ export const TradeMonitor = () => {
                       <span className="font-medium">{trades.length}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Success Rate</span>
-                      <span className="font-medium">75%</span>
+                      <span className="text-muted-foreground">Last Hour</span>
+                      <span className="font-medium">{trades.filter(t => Date.now() - new Date(t.timestamp).getTime() < 3600000).length}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total P&L</span>
-                      <span className="font-medium">{getProfitDisplay(calculateTotalProfit())}</span>
+                      <span className="text-muted-foreground">Unique Symbols</span>
+                      <span className="font-medium">{new Set(trades.map(t => t.trade?.symbol)).size}</span>
                     </div>
                   </div>
                 </div>
                 <div>
                   <h4 className="font-medium mb-2">Most Active Pairs</h4>
                   <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">EURUSD</span>
-                      <span className="font-medium">40%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">GBPUSD</span>
-                      <span className="font-medium">30%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">USDJPY</span>
-                      <span className="font-medium">30%</span>
-                    </div>
+                    {trades.length === 0 ? (
+                      <div className="text-center text-muted-foreground">No data available</div>
+                    ) : (
+                      Object.entries(
+                        trades.reduce((acc, trade) => {
+                          const symbol = trade.trade?.symbol || 'Unknown';
+                          acc[symbol] = (acc[symbol] || 0) + 1;
+                          return acc;
+                        }, {} as Record<string, number>)
+                      )
+                      .sort(([,a], [,b]) => (b as number) - (a as number))
+                      .slice(0, 3)
+                      .map(([symbol, count]) => (
+                        <div key={symbol} className="flex justify-between">
+                          <span className="text-muted-foreground">{symbol}</span>
+                          <span className="font-medium">{count as number}</span>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

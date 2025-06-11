@@ -6,9 +6,11 @@ import { ConnectionStatus } from './ConnectionStatus';
 import { RelationshipManager } from './RelationshipManager';
 import { TradeMonitor } from './TradeMonitor';
 import { Activity, Users, Settings, BarChart3 } from 'lucide-react';
+import { useTradingBridge } from '@/hooks/useTradingBridge';
 
 export const TradingDashboard = () => {
   const [activeTab, setActiveTab] = useState('accounts');
+  const bridge = useTradingBridge();
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -19,7 +21,7 @@ export const TradingDashboard = () => {
             <h1 className="text-3xl font-bold text-foreground">Trading Bridge</h1>
             <p className="text-muted-foreground">MT5 ↔ cTrader Communication Bridge</p>
           </div>
-          <ConnectionStatus />
+          <ConnectionStatus isConnected={bridge.isConnected} onRefresh={bridge.refreshData} />
         </div>
 
         {/* Main Dashboard */}
@@ -44,15 +46,19 @@ export const TradingDashboard = () => {
           </TabsList>
 
           <TabsContent value="accounts">
-            <AccountManager />
+            <AccountManager accounts={bridge.accounts} />
           </TabsContent>
 
           <TabsContent value="relationships">
-            <RelationshipManager />
+            <RelationshipManager 
+              accounts={bridge.accounts}
+              relationships={bridge.relationships}
+              onCreateRelationship={bridge.createRelationship}
+            />
           </TabsContent>
 
           <TabsContent value="monitor">
-            <TradeMonitor />
+            <TradeMonitor trades={bridge.trades} />
           </TabsContent>
 
           <TabsContent value="activity">
@@ -63,18 +69,22 @@ export const TradingDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center p-2 bg-muted rounded">
-                    <span>MT5-001 connected successfully</span>
-                    <span className="text-muted-foreground">2 min ago</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-muted rounded">
-                    <span>cTrader-001 established bridge connection</span>
-                    <span className="text-muted-foreground">5 min ago</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-muted rounded">
-                    <span>Trade copied: EURUSD Buy 0.1 lot</span>
-                    <span className="text-muted-foreground">8 min ago</span>
-                  </div>
+                  {bridge.trades.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-4">
+                      No recent activity
+                    </div>
+                  ) : (
+                    bridge.trades.slice(0, 10).map((trade) => (
+                      <div key={trade.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                        <span>
+                          {trade.trade.symbol} {trade.trade.action} copied from {trade.from} to {trade.to}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {new Date(trade.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
