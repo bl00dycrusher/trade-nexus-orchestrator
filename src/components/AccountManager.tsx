@@ -9,17 +9,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Trash2, Plus, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-interface Account {
-  id: string;
-  name: string;
-  platform: 'MT5' | 'cTrader';
-  server: string;
-  accountNumber: string;
-  role: 'Provider' | 'Copyer' | 'Both';
-  status: 'Connected' | 'Disconnected' | 'Error';
+import { Account } from '@/hooks/useTradingBridge';
+
+interface AccountManagerProps {
+  accounts: Account[];
 }
 
-export const AccountManager = () => {
+export const AccountManager = ({ accounts }: AccountManagerProps) => {
   const { toast } = useToast();
   const [accounts, setAccounts] = useState<Account[]>([
     {

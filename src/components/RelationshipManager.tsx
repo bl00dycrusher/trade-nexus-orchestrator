@@ -9,25 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowRight, Plus, Trash2, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Account, Relationship } from '@/hooks/useTradingBridge';
 
-interface Account {
-  id: string;
-  name: string;
-  platform: 'MT5' | 'cTrader';
-  role: 'Provider' | 'Copyer' | 'Both';
+interface RelationshipManagerProps {
+  accounts: Account[];
+  relationships: Relationship[];
+  onCreateRelationship: (providerId: string, copyerId: string, volumeMultiplier?: number) => void;
 }
 
-interface Relationship {
-  id: string;
-  providerId: string;
-  copyerId: string;
-  multiplier: number;
-  maxLots: number;
-  enabled: boolean;
-  createdAt: Date;
-}
-
-export const RelationshipManager = () => {
+export const RelationshipManager = ({ accounts, relationships, onCreateRelationship }: RelationshipManagerProps) => {
   const { toast } = useToast();
   
   // Mock accounts data

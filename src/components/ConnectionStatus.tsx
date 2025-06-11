@@ -4,13 +4,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Wifi, WifiOff, RefreshCw, Server } from 'lucide-react';
 
-interface ConnectionInfo {
-  service: string;
-  status: 'connected' | 'disconnected' | 'error';
-  lastUpdate: Date;
+interface ConnectionStatusProps {
+  isConnected: boolean;
+  onRefresh: () => void;
 }
 
-export const ConnectionStatus = () => {
+export const ConnectionStatus = ({ isConnected, onRefresh }: ConnectionStatusProps) => {
   const [connections, setConnections] = useState<ConnectionInfo[]>([
     {
       service: 'Bridge Server',
