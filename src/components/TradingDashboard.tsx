@@ -1,9 +1,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AccountManager } from './AccountManager';
-import { ConnectionStatus } from './ConnectionStatus';
-import { RelationshipManager } from './RelationshipManager';
 import { TradeMonitor } from './TradeMonitor';
 import { Activity, Users, Settings, BarChart3 } from 'lucide-react';
 import { useTradingBridge } from '@/hooks/useTradingBridge';
@@ -21,7 +18,11 @@ export const TradingDashboard = () => {
             <h1 className="text-3xl font-bold text-foreground">Trading Bridge</h1>
             <p className="text-muted-foreground">MT5 ↔ cTrader Communication Bridge</p>
           </div>
-          <ConnectionStatus isConnected={bridge.isConnected} onRefresh={bridge.refreshData} />
+          <div className="text-sm">
+            <span className={`px-2 py-1 rounded text-xs ${bridge.isConnected ? 'bg-trading-success text-trading-success-foreground' : 'bg-trading-danger text-trading-danger-foreground'}`}>
+              {bridge.isConnected ? 'Connected' : 'Disconnected'}
+            </span>
+          </div>
         </div>
 
         {/* Main Dashboard */}
@@ -29,11 +30,11 @@ export const TradingDashboard = () => {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="accounts" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Accounts
+              Accounts ({bridge.accounts.length})
             </TabsTrigger>
             <TabsTrigger value="relationships" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Relationships
+              Relationships ({bridge.relationships.length})
             </TabsTrigger>
             <TabsTrigger value="monitor" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -41,20 +42,84 @@ export const TradingDashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="activity" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
-              Activity
+              Activity ({bridge.trades.length})
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="accounts">
-            <AccountManager accounts={bridge.accounts} />
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Connected Accounts</CardTitle>
+                  <CardDescription>Accounts connected from bridge server</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {bridge.accounts.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No accounts connected. Start your MT5 EA or cTrader cBot to register accounts.
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">
+                      {bridge.accounts.map((account) => (
+                        <div key={account.account_id} className="p-4 border rounded-lg">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-semibold">{account.display_name}</h3>
+                              <p className="text-sm text-muted-foreground">{account.account_id}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <span className={`px-2 py-1 rounded text-xs ${account.is_connected ? 'bg-trading-success text-trading-success-foreground' : 'bg-trading-neutral text-trading-neutral-foreground'}`}>
+                                {account.is_connected ? 'Connected' : 'Disconnected'}
+                              </span>
+                              <span className="px-2 py-1 rounded text-xs bg-primary text-primary-foreground capitalize">
+                                {account.account_type}
+                              </span>
+                              <span className="px-2 py-1 rounded text-xs bg-muted text-muted-foreground uppercase">
+                                {account.platform}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="relationships">
-            <RelationshipManager 
-              accounts={bridge.accounts}
-              relationships={bridge.relationships}
-              onCreateRelationship={bridge.createRelationship}
-            />
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Copy Relationships</CardTitle>
+                  <CardDescription>Active trade copying relationships</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {bridge.relationships.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No relationships configured yet.
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">
+                      {bridge.relationships.map((rel, index) => (
+                        <div key={index} className="p-4 border rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">{rel.provider_id} → {rel.copyer_id}</p>
+                              <p className="text-sm text-muted-foreground">Volume multiplier: {rel.volume_multiplier}x</p>
+                            </div>
+                            <span className={`px-2 py-1 rounded text-xs ${rel.is_active ? 'bg-trading-success text-trading-success-foreground' : 'bg-trading-neutral text-trading-neutral-foreground'}`}>
+                              {rel.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="monitor">
