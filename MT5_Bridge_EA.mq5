@@ -10,14 +10,6 @@
 
 #include <Trade\Trade.mqh>
 
-// Input parameters
-input string    InpServerURL = "ws://localhost:8765/trading";
-input string    InpAccountName = "MT5-001";
-input ENUM_ACCOUNT_TYPE InpAccountType = ACCOUNT_TYPE_BOTH; // PROVIDER, COPYER, BOTH
-input int       InpMagicNumber = 12345;
-input double    InpMaxLotSize = 10.0;
-input bool      InpEnableLogging = true;
-
 // Custom enum for account types
 enum ENUM_ACCOUNT_TYPE
 {
@@ -26,9 +18,17 @@ enum ENUM_ACCOUNT_TYPE
    ACCOUNT_TYPE_BOTH = 2       // Both Provider and Copyer
 };
 
+// Input parameters
+input string    InpServerURL = "ws://localhost:8765/trading";
+input string    InpAccountName = "MT5-001";
+input ENUM_ACCOUNT_TYPE InpAccountType = ACCOUNT_TYPE_BOTH; // PROVIDER, COPYER, BOTH
+input int       InpMagicNumber = 12345;
+input double    InpMaxLotSize = 10.0;
+input bool      InpEnableLogging = true;
+
 // Global variables
 CTrade trade;
-int websocket_handle = INVALID_HANDLE;
+int file_handle = INVALID_HANDLE;
 string account_id;
 datetime last_heartbeat = 0;
 bool is_connected = false;
@@ -65,10 +65,10 @@ void OnDeinit(const int reason)
 {
    EventKillTimer();
    
-   if(websocket_handle != INVALID_HANDLE)
+   if(file_handle != INVALID_HANDLE)
    {
-      SocketClose(websocket_handle);
-      websocket_handle = INVALID_HANDLE;
+      FileClose(file_handle);
+      file_handle = INVALID_HANDLE;
    }
    
    if(InpEnableLogging)
@@ -115,29 +115,25 @@ void OnTrade()
 //+------------------------------------------------------------------+
 void ConnectToBridge()
 {
-   if(websocket_handle != INVALID_HANDLE)
+   if(is_connected)
       return;
       
-   // Create WebSocket connection (simplified - in real implementation use proper WebSocket library)
-   websocket_handle = SocketCreate();
+   // Use file-based communication instead of WebSocket
+   string filename = "bridge_mt5_" + account_id + ".txt";
+   file_handle = FileOpen(filename, FILE_WRITE|FILE_READ|FILE_TXT|FILE_COMMON);
    
-   if(websocket_handle != INVALID_HANDLE)
+   if(file_handle != INVALID_HANDLE)
    {
-      if(SocketConnect(websocket_handle, "localhost", 8765, 1000))
-      {
-         is_connected = true;
-         RegisterAccount();
-         
-         if(InpEnableLogging)
-            Print("Connected to bridge server");
-      }
-      else
-      {
-         SocketClose(websocket_handle);
-         websocket_handle = INVALID_HANDLE;
-         if(InpEnableLogging)
-            Print("Failed to connect to bridge server");
-      }
+      is_connected = true;
+      RegisterAccount();
+      
+      if(InpEnableLogging)
+         Print("Connected to bridge server via file: ", filename);
+   }
+   else
+   {
+      if(InpEnableLogging)
+         Print("Failed to create bridge file: ", filename);
    }
 }
 
@@ -197,7 +193,8 @@ void CheckForNewTrades()
    // Get recent positions
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
-      if(PositionSelectByIndex(i))
+      string symbol = PositionGetSymbol(i);
+      if(PositionSelect(symbol))
       {
          if(PositionGetInteger(POSITION_MAGIC) == InpMagicNumber)
          {
@@ -253,20 +250,30 @@ void SendTradeSignal()
 //+------------------------------------------------------------------+
 void ProcessIncomingMessages()
 {
-   if(!is_connected)
+   if(!is_connected || file_handle == INVALID_HANDLE)
       return;
       
-   string message;
-   uint timeout = 100;
+   // Read commands from file
+   string filename = "bridge_commands_" + account_id + ".txt";
+   int cmd_handle = FileOpen(filename, FILE_READ|FILE_TXT|FILE_COMMON);
    
-   // Read incoming data (simplified - use proper WebSocket parsing)
-   uchar data[];
-   int received = SocketReceive(websocket_handle, data, timeout);
-   
-   if(received > 0)
+   if(cmd_handle != INVALID_HANDLE)
    {
-      message = CharArrayToString(data);
-      ProcessMessage(message);
+      if(FileSize(cmd_handle) > 0)
+      {
+         string message = FileReadString(cmd_handle);
+         if(StringLen(message) > 0)
+         {
+            ProcessMessage(message);
+            FileClose(cmd_handle);
+            // Clear the file after reading
+            FileDelete(filename, FILE_COMMON);
+         }
+      }
+      else
+      {
+         FileClose(cmd_handle);
+      }
    }
 }
 
@@ -335,21 +342,24 @@ void ExecuteReceivedTrade(string message)
 //+------------------------------------------------------------------+
 void SendMessage(string message)
 {
-   if(!is_connected || websocket_handle == INVALID_HANDLE)
+   if(!is_connected || file_handle == INVALID_HANDLE)
       return;
       
-   uchar data[];
-   StringToCharArray(message, data);
+   // Write message to output file
+   string out_filename = "bridge_out_" + account_id + ".txt";
+   int out_handle = FileOpen(out_filename, FILE_WRITE|FILE_TXT|FILE_COMMON);
    
-   int sent = SocketSend(websocket_handle, data, ArraySize(data));
-   
-   if(sent <= 0)
+   if(out_handle != INVALID_HANDLE)
    {
-      is_connected = false;
-      SocketClose(websocket_handle);
-      websocket_handle = INVALID_HANDLE;
+      FileWrite(out_handle, message);
+      FileClose(out_handle);
       
       if(InpEnableLogging)
-         Print("Connection lost, will attempt to reconnect");
+         Print("Message sent to bridge: ", StringLen(message), " chars");
+   }
+   else
+   {
+      if(InpEnableLogging)
+         Print("Failed to write message to bridge file");
    }
 }

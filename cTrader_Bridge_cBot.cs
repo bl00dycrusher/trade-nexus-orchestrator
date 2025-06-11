@@ -18,8 +18,8 @@ namespace cAlgo.Robots
         [Parameter("Account Name", DefaultValue = "cTrader-001")]
         public string AccountName { get; set; }
 
-        [Parameter("Account Type", DefaultValue = AccountType.Both)]
-        public AccountType AccountType { get; set; }
+        [Parameter("Account Type", DefaultValue = BridgeAccountType.Both)]
+        public BridgeAccountType AccountType { get; set; }
 
         [Parameter("Magic Number", DefaultValue = 12345)]
         public int MagicNumber { get; set; }
@@ -36,7 +36,7 @@ namespace cAlgo.Robots
         private bool _isConnected = false;
         private DateTime _lastHeartbeat = DateTime.MinValue;
 
-        public enum AccountType
+        public enum BridgeAccountType
         {
             Provider,
             Copyer,
@@ -83,15 +83,19 @@ namespace cAlgo.Robots
             }
         }
 
-        protected override void OnPositionOpened(PositionOpenedEventArgs args)
+        protected override void OnTick()
         {
-            // Only send trade signals if account is a provider
-            if (AccountType == AccountType.Provider || AccountType == AccountType.Both)
+            // Check for new positions and send trade signals if account is a provider
+            if (AccountType == BridgeAccountType.Provider || AccountType == BridgeAccountType.Both)
             {
-                if (args.Position.Label.Contains(MagicNumber.ToString()) || 
-                    args.Position.Comment.Contains("Bridge"))
+                foreach (var position in Positions)
                 {
-                    Task.Run(async () => await SendTradeSignal(args.Position));
+                    if ((position.Label.Contains(MagicNumber.ToString()) || 
+                         position.Comment.Contains("Bridge")) &&
+                        position.EntryTime > DateTime.UtcNow.AddMinutes(-2))
+                    {
+                        Task.Run(async () => await SendTradeSignal(position));
+                    }
                 }
             }
         }
@@ -135,9 +139,9 @@ namespace cAlgo.Robots
 
             var accountTypeStr = AccountType switch
             {
-                AccountType.Provider => "provider",
-                AccountType.Copyer => "copyer",
-                AccountType.Both => "both",
+                BridgeAccountType.Provider => "provider",
+                BridgeAccountType.Copyer => "copyer",
+                BridgeAccountType.Both => "both",
                 _ => "both"
             };
 
@@ -234,7 +238,7 @@ namespace cAlgo.Robots
                     typeElement.GetString() == "execute_trade")
                 {
                     // Only execute trades if account is a copyer
-                    if (AccountType == AccountType.Copyer || AccountType == AccountType.Both)
+                    if (AccountType == BridgeAccountType.Copyer || AccountType == BridgeAccountType.Both)
                     {
                         await ExecuteReceivedTrade(root);
                     }
