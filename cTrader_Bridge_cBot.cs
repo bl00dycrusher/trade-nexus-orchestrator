@@ -175,7 +175,7 @@ namespace cAlgo.Robots
             {
                 symbol = position.SymbolName,
                 action = position.TradeType == TradeType.Buy ? "BUY" : "SELL",
-                volume = VolumeInUnitsToQuantity(position.VolumeInUnits),
+                volume = Symbol.VolumeInUnitsToQuantity(position.VolumeInUnits),
                 price = position.EntryPrice,
                 sl = position.StopLoss ?? 0.0,
                 tp = position.TakeProfit ?? 0.0,
@@ -194,7 +194,7 @@ namespace cAlgo.Robots
             await SendMessage(JsonSerializer.Serialize(message));
 
             if (EnableLogging)
-                Print($"Trade signal sent: {position.SymbolName} {position.TradeType} {VolumeInUnitsToQuantity(position.VolumeInUnits)}");
+                Print($"Trade signal sent: {position.SymbolName} {position.TradeType} {Symbol.VolumeInUnitsToQuantity(position.VolumeInUnits)}");
         }
 
         private async Task ListenForMessages()
@@ -282,10 +282,10 @@ namespace cAlgo.Robots
                                 Math.Min(symbolObj.VolumeInUnitsMax, volumeInUnits));
 
                 // Validate lot size against our maximum
-                var adjustedVolume = VolumeInUnitsToQuantity(volumeInUnits);
+                var adjustedVolume = symbolObj.VolumeInUnitsToQuantity(volumeInUnits);
                 if (adjustedVolume > MaxLotSize)
                 {
-                    volumeInUnits = symbolObj.QuantityToVolumeInUnits(MaxLotSize);
+                    volumeInUnits = (long)symbolObj.QuantityToVolumeInUnits(MaxLotSize);
                 }
 
                 // Execute trade
@@ -352,9 +352,5 @@ namespace cAlgo.Robots
             }
         }
 
-        private double VolumeInUnitsToQuantity(long volumeInUnits)
-        {
-            return Symbol.VolumeInUnitsToQuantity(volumeInUnits);
-        }
     }
 }

@@ -2,6 +2,8 @@ import asyncio
 import websockets
 import json
 import logging
+import os
+import glob
 from datetime import datetime
 from typing import Dict, List, Optional
 from dataclasses import dataclass, asdict
@@ -108,7 +110,13 @@ class TradingBridge:
                 "trade_data": asdict(trade_data)
             }
             
-            await copyer_account.websocket.send(json.dumps(message))
+            # Send via WebSocket if available, otherwise use file for MT5
+            if copyer_account.websocket:
+                await copyer_account.websocket.send(json.dumps(message))
+            else:
+                # File-based communication for MT5
+                await self.send_command_to_mt5(copyer_account.account_id, message)
+                
             logger.info(f"Trade sent to {copyer_account.account_id}")
             
             # Notify GUI
@@ -187,6 +195,83 @@ class TradingBridge:
                     
         except Exception as e:
             logger.error(f"Error handling platform message: {e}")
+            
+    async def monitor_mt5_files(self):
+        """Monitor MT5 file-based communication"""
+        while True:
+            try:
+                # Look for MT5 output files
+                pattern = "bridge_out_*.txt"
+                files = glob.glob(pattern)
+                
+                for file_path in files:
+                    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                        try:
+                            with open(file_path, 'r') as f:
+                                message = f.read().strip()
+                            
+                            if message:
+                                # Process the message
+                                data = json.loads(message)
+                                await self.handle_mt5_file_message(data)
+                                
+                                # Clear the file after processing
+                                open(file_path, 'w').close()
+                                
+                        except Exception as e:
+                            logger.error(f"Error processing MT5 file {file_path}: {e}")
+                            
+                await asyncio.sleep(1)  # Check every second
+                
+            except Exception as e:
+                logger.error(f"Error monitoring MT5 files: {e}")
+                await asyncio.sleep(5)
+                
+    async def handle_mt5_file_message(self, data):
+        """Handle messages from MT5 files"""
+        try:
+            message_type = data.get("type")
+            
+            if message_type == "register":
+                # Create a mock websocket for file-based communication
+                account = Account(
+                    account_id=data["account_id"],
+                    platform=Platform(data["platform"]),
+                    account_type=AccountType(data["account_type"]),
+                    display_name=data["display_name"],
+                    is_connected=True,
+                    websocket=None  # No websocket for file-based communication
+                )
+                
+                self.accounts[account.account_id] = account
+                logger.info(f"MT5 File Account registered: {account.account_id}")
+                
+                # Notify GUI of account registration
+                await self.notify_gui({
+                    "type": "account_registered",
+                    "account": asdict(account)
+                })
+                
+            elif message_type == "trade_signal":
+                trade_data = TradeData(**data["trade_data"])
+                await self.handle_trade_signal(data["account_id"], trade_data)
+                
+            elif message_type == "heartbeat":
+                account_id = data.get("account_id")
+                if account_id in self.accounts:
+                    self.accounts[account_id].is_connected = True
+                    
+        except Exception as e:
+            logger.error(f"Error handling MT5 file message: {e}")
+            
+    async def send_command_to_mt5(self, account_id: str, command: dict):
+        """Send command to MT5 via file"""
+        try:
+            filename = f"bridge_commands_{account_id}.txt"
+            with open(filename, 'w') as f:
+                f.write(json.dumps(command))
+        except Exception as e:
+            logger.error(f"Error sending command to MT5 {account_id}: {e}")
 
 # Global bridge instance
 bridge = TradingBridge()
@@ -231,6 +316,9 @@ async def main():
     
     start_server = websockets.serve(handle_client, "localhost", 8765)
     await start_server
+    
+    # Start MT5 file monitoring
+    asyncio.create_task(bridge.monitor_mt5_files())
     
     logger.info("Trading Bridge Server is running...")
     await asyncio.Future()  # Run forever
